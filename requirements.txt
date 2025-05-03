@@ -31,6 +31,7 @@ opencv-python==4.11.0.86
 packaging==25.0
 pillow==11.2.1
 pillow-avif-plugin==1.5.2
+pillow_heif==0.22.0
 preshed==3.0.9
 proto-plus==1.26.1
 protobuf==5.29.4
