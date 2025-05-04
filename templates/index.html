@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Image Geolocation Engine</title>
+    <style>
+        body { font-family: sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; border: 1px solid #ccc; border-radius: 8px; }
+        label { display: block; margin-top: 10px; }
+        input[type=file], textarea { width: 95%; margin-bottom: 10px; padding: 8px; }
+        textarea { height: 60px; }
+        button { padding: 10px 15px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>AI-Powered Image Geolocation Engine</h1>
+    <form method="post" action="/upload" enctype="multipart/form-data">
+        <label for="image">Select Image File:</label>
+        <input type="file" id="image" name="image" accept="image/*" required>
+
+        <label for="text">Optional Associated Text (Caption, etc.):</label>
+        <textarea id="text" name="text"></textarea>
+
+        <button type="submit">Geolocate Image</button>
+    </form>
+</body>
+</html>

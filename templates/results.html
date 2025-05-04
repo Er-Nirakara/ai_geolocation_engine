@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Geolocation Results</title>
+     <style>
+        body { font-family: sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; border: 1px solid #ccc; border-radius: 8px; }
+        .result-item { margin-bottom: 15px; }
+        .label { font-weight: bold; }
+        img.map { max-width: 100%; height: auto; border: 1px solid #eee; margin-top: 10px;}
+        .error { color: red; font-weight: bold;}
+        a { color: #007bff; }
+    </style>
+</head>
+<body>
+    <h1>Geolocation Results</h1>
+
+    {% if error %}
+        <p class="error">Error processing request: {{ error }}</p>
+    {% elif results %}
+        <div class="result-item">
+            <span class="label">Source of Prediction:</span> {{ results.source }}
+        </div>
+        <div class="result-item">
+            <span class="label">Confidence:</span> {{ results.confidence_score | round(2) }} ({{ results.confidence_label }})
+        </div>
+
+        {% if results.success %}
+            <div class="result-item">
+                <span class="label">Predicted Coordinates:</span> Lat={{ results.latitude | round(6) }}, Lon={{ results.longitude | round(6) }}
+            </div>
+            <div class="result-item">
+                <span class="label">Predicted Address:</span> {{ results.address if results.address else 'N/A' }}
+            </div>
+            <div class="result-item">
+                <span class="label">Map:</span>
+                {% if results.map_url %}
+                    <img src="{{ results.map_url }}" alt="Map showing predicted location" class="map">
+                    <br><small>(<a href="https://www.google.com/maps?q={{ results.latitude }},{{ results.longitude }}" target="_blank">View on Google Maps</a>)</small>
+                 {% else %}
+                    (Map could not be generated - API Key likely missing)
+                 {% endif %}
+            </div>
+        {% else %}
+             <p>Could not determine location from available sources.</p>
+        {% endif %}
+
+    {% else %}
+        <p>No results were returned.</p>
+    {% endif %}
+
+    <hr>
+    <a href="/">Try another image</a>
+
+</body>
+</html>
