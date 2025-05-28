@@ -27,24 +27,29 @@ logging.basicConfig(
 # Load spaCy NLP Model
 NLP = None # Initialize to None in case loading fails
 try:
-    NLP = spacy.load("en_core_web_lg") # Using a larger model for better accuracy
+    NLP = spacy.load("en_core_web_lg")
     logging.info("spaCy NLP model ('en_core_web_lg') loaded successfully.")
-except OSError:
+except OSError as e_spacy: # Give the exception a specific name
     logging.error(
         "Failed to load 'en_core_web_lg' spaCy model. NLP features will be disabled. "
+        f"THE SPECIFIC OS ERROR WAS: {e_spacy}. " # ADDED THIS LINE
         "To install: python -m spacy download en_core_web_lg"
     )
+
+    # Optional: For even more detail, uncomment the next two lines
+    import traceback
+    logging.error(f"Full spaCy loading traceback:\n{traceback.format_exc()}")
     # Script can continue, but process_text_with_nlp will return empty if NLP is None
 
 # Configuration for geolocation logic
-LOCATION_ENTITY_LABELS = {"GPE", "LOC", "FAC"}  # spaCy entity labels considered as locations
-LANDMARK_CONFIDENCE_THRESHOLD = 0.5             # Minimum confidence for Vision API landmarks
-CONSISTENCY_THRESHOLD_KM = 10.0                 # Max distance for candidates to be 'consistent'
-VERIFICATION_RADIUS_KM = 1.0                    # Search radius for Places & OSM verification
+LOCATION_ENTITY_LABELS = {"GPE", "LOC", "FAC", "ORG"}  # spaCy entity labels considered as locations
+LANDMARK_CONFIDENCE_THRESHOLD = 0.5                    # Minimum confidence for Vision API landmarks
+CONSISTENCY_THRESHOLD_KM = 10.0                        # Max distance for candidates to be 'consistent'
+VERIFICATION_RADIUS_KM = 1.0                           # Search radius for Places & OSM verification
 OVERPASS_URL = "https://overpass-api.de/api/interpreter" # OSM Overpass API endpoint
-OVERPASS_TIMEOUT = 30                           # Seconds for Overpass requests
-PLACES_API_TIMEOUT = 10                         # Seconds for Google Places API requests
-API_RETRY_DELAY = 0.05                          # Brief pause between some API calls
+OVERPASS_TIMEOUT = 30                                  # Seconds for Overpass requests
+PLACES_API_TIMEOUT = 10                                # Seconds for Google Places API requests
+API_RETRY_DELAY = 0.05                                 # Brief pause between some API calls
 
 # --- Helper Functions ---
 
@@ -133,7 +138,7 @@ def reverse_geocode(lat, lon, api_key):
     if not api_key: logging.warning("Reverse geocode skipped: No API Key."); return None
     if lat is None or lon is None: logging.warning("Reverse geocode skipped: Invalid coordinates."); return None
     try:
-        gmaps = googlemaps.Client(key=api_key, requests_timeout=PLACES_API_TIMEOUT)
+        gmaps = googlemaps.Client(key=api_key, timeout=PLACES_API_TIMEOUT)
         results = gmaps.reverse_geocode((lat, lon))
         return results[0]['formatted_address'] if results else None
     except Exception as e:
@@ -145,7 +150,7 @@ def geocode_location_name(location_name, api_key):
     if not api_key: logging.warning("Geocode skipped: No API Key."); return None, None, None
     if not location_name: logging.warning("Geocode skipped: No location name provided."); return None, None, None
     try:
-        gmaps = googlemaps.Client(key=api_key, requests_timeout=PLACES_API_TIMEOUT)
+        gmaps = googlemaps.Client(key=api_key, timeout=PLACES_API_TIMEOUT)
         results = gmaps.geocode(location_name)
         if results:
             loc = results[0]['geometry']['location']
@@ -264,7 +269,7 @@ def query_places_nearby(lat, lon, api_key, radius_meters=500, keyword=None):
 
     logging.info(f"Querying Places API Nearby Search ({lat:.4f},{lon:.4f}), Keyword: {keyword if keyword else 'General Scan'}")
     try:
-        gmaps = googlemaps.Client(key=api_key, requests_timeout=PLACES_API_TIMEOUT)
+        gmaps = googlemaps.Client(key=api_key, timeout=PLACES_API_TIMEOUT)
         places_results_api = gmaps.places_nearby(location=(lat, lon), radius=radius_meters, keyword=keyword)
         # logging.debug(f"RAW Places Nearby Response: {places_results_api}") # For deep debugging
         results = places_results_api.get('results', [])
