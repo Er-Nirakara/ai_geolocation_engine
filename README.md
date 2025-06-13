@@ -17,7 +17,7 @@ The system employs an advanced evidence fusion logic to combine these diverse da
 
 *   **Multi-Modal Geolocation:** Combines EXIF, NLP, CV, Places API, and OSM data.
 *   **EXIF Data Extraction:** Reads GPS latitude, longitude from image metadata.
-*   **NLP Analysis (spaCy):** Processes user-provided text captions to identify location-related entities.
+*   **NLP Analysis (spaCy):** Processes user-provided text captions to identify location-related entities using the `en_core_web_lg` model.
 *   **Computer Vision Analysis (Google Cloud Vision API):**
     *   **Landmark Recognition:** Identifies known geographical landmarks.
     *   **Optical Character Recognition (OCR):** Detects and extracts text from images.
@@ -33,7 +33,7 @@ The system employs an advanced evidence fusion logic to combine these diverse da
 *   **Map Visualization:** Generates a Google Static Maps API link for the predicted location.
 *   **Broad Image Format Support:** Handles common image formats (JPEG, PNG, etc.) and attempts to support others like HEIC/AVIF via Pillow plugins (if installed).
 *   **Dual Interface:**
-    *   **Command-Line Interface (CLI):** For script-based processing (`geolocate_v4.py`).
+    *   **Command-Line Interface (CLI):** For script-based processing (`image_geolocate.py`).
     *   **Web Interface (Flask):** For easy image upload and visual results display (`app.py`).
 
 ## 3. System Architecture (High-Level)
@@ -83,16 +83,14 @@ The system employs an advanced evidence fusion logic to combine these diverse da
     ```
 
 4.  **Download spaCy Language Model:**
-    The engine currently uses `en_core_web_sm`. For better NLP accuracy (especially for recognizing specific place names like "Colosseum"), consider a larger model:
+    The engine attempts to load the `en_core_web_lg` spaCy model for Natural Language Processing. Ensure this model is downloaded:
     ```bash
-    python -m spacy download en_core_web_md
-    # OR
-    # python -m spacy download en_core_web_lg
+    python -m spacy download en_core_web_lg
     ```
-    Then, update the model name in `geolocation_engine.py` (e.g., `NLP = spacy.load("en_core_web_md")`).
+    If this model fails to load, NLP-based geolocation features will be disabled (the engine will log an error message).
 
 5.  **Install Optional Pillow Image Format Plugins:**
-    For HEIC/HEIF, AVIF support:
+    For HEIC/HEIF, AVIF support (as mentioned in `geolocation_engine.py` logging):
     ```bash
     pip install pillow-heif
     pip install pillow-avif-plugin
@@ -116,21 +114,21 @@ The system employs an advanced evidence fusion logic to combine these diverse da
         GOOGLE_MAPS_API_KEY='YOUR_ACTUAL_GOOGLE_MAPS_PLATFORM_API_KEY'
         ```
     *   **Google Application Credentials (for Vision API):**
-        Set the `GOOGLE_APPLICATION_CREDENTIALS` environment variable to the **absolute path** of your downloaded service account JSON key file. The `geolocation_engine.py` is set up to read this path.
+        Set the `GOOGLE_APPLICATION_CREDENTIALS` environment variable to the **absolute path** of your downloaded service account JSON key file. The `geolocation_engine.py` is set up to read this path (it uses `os.getenv("GOOGLE_APPLICATION_CREDENTIALS")` and then `vision.ImageAnnotatorClient.from_service_account_file()`).
         *Set this in your terminal session before running the app:*
             *   PowerShell: `$env:GOOGLE_APPLICATION_CREDENTIALS="C:\path\to\your\service-account-file.json"`
             *   CMD: `set GOOGLE_APPLICATION_CREDENTIALS="C:\path\to\your\service-account-file.json"`
             *   Bash/Linux/macOS: `export GOOGLE_APPLICATION_CREDENTIALS="/path/to/your/service-account-file.json"`
 
 8.  **Important: `.gitignore`:**
-    Your `.gitignore` should already be configured to ignore `.env`, `venv/`, `uploads/`, and `*.json` (or your specific key file name).
+    Your `.gitignore` should already be configured to ignore `.env`, `venv/`, `uploads/`, and `*.json` (or your specific key file name like `gcloud_key.json`).
 
 ## 5. How to Run
 
 ### a) Web Interface (Flask)
 
 1.  Ensure setup is complete and the virtual environment is active.
-2.  Set the `GOOGLE_APPLICATION_CREDENTIALS` environment variable in your terminal.
+2.  Set the `GOOGLE_APPLICATION_CREDENTIALS` environment variable in your terminal (see Step 7 above).
 3.  Run:
     ```bash
     python app.py
@@ -140,15 +138,19 @@ The system employs an advanced evidence fusion logic to combine these diverse da
 ### b) Command-Line Interface (CLI)
 
 1.  Ensure setup is complete and the virtual environment is active.
-2.  Set the `GOOGLE_APPLICATION_CREDENTIALS` environment variable in your terminal.
+2.  Set the `GOOGLE_APPLICATION_CREDENTIALS` environment variable in your terminal (see Step 7 above).
 3.  Run:
     ```bash
-    python geolocate_v4.py "path/to/your/image.jpg" --text "Optional caption"
+    python image_geolocate.py "path/to/your/image.jpg" --text "Optional caption for NLP analysis"
+    ```
+    Example:
+    ```bash
+    python image_geolocate.py "./my_images/eiffel_tower.jpg" --text "A photo I took of the Eiffel Tower last summer."
     ```
 
 ## 6. Output Description
 
-*   **Source of Prediction:** Primary data source(s) used (e.g., EXIF, CV Landmark, NLP, OCR).
+*   **Source of Prediction:** Primary data source(s) used (e.g., EXIF, CV Landmark, NLP, OCR), potentially with specific names/text if derived from those.
 *   **Confidence Score:** Numerical score (0.0-1.0) and label (Low, Medium, High).
 *   **Predicted Coordinates:** Latitude and Longitude.
 *   **Predicted Address:** Human-readable address/place name.
@@ -157,26 +159,34 @@ The system employs an advanced evidence fusion logic to combine these diverse da
 ## 7. Known Limitations & Future Work
 
 *   **API Costs & Quotas:** Monitor Google Cloud API usage to stay within free tiers or manage costs.
-*   **NLP Model:** The default `en_core_web_sm` spaCy model might not recognize all specific named entities as locations. Using a larger model (`md` or `lg`) is recommended.
-*   **Overpass API Robustness:** Overpass API can sometimes be slow or temporarily unavailable. Error handling is basic.
-*   **Complex Scenarios:** Highly ambiguous images or those with conflicting clues can still be challenging.
+*   **NLP Model Robustness:** The `geolocation_engine.py` uses the `en_core_web_lg` spaCy model. While good, ensure it's properly installed. If it fails to load, NLP features are disabled, which can reduce accuracy for text-based clues.
+*   **Overpass API Robustness:** The Overpass API (for OpenStreetMap data) can sometimes be slow or temporarily unavailable. The engine has basic error handling and a timeout (`OVERPASS_TIMEOUT = 30` seconds).
+*   **Complex Scenarios:** Highly ambiguous images or those with conflicting clues can still be challenging for the current fusion logic.
 
 **Future Work Ideas:**
 
 *   Implement an ML-based evidence fusion model.
-*   Improve OCR post-processing (e.g., identify and geocode only street names/POIs).
-*   More sophisticated error handling and retries for API calls.
-*   Caching API results to reduce costs and speed up repeated queries.
+*   Improve OCR post-processing (e.g., more advanced NLP to identify and geocode only relevant street names/POIs from OCR text).
+*   More sophisticated error handling and retries for API calls (currently `API_RETRY_DELAY = 0.05`s is a brief pause, not a full retry mechanism).
+*   Caching API results to reduce costs and speed up repeated queries for identical inputs.
 
 ## 8. Troubleshooting
 
-*   **`ImportError`**: Ensure all files are in the correct directory and check for syntax errors in the imported file by running it directly (e.g., `python geolocation_engine.py`).
-*   **`GOOGLE_APPLICATION_CREDENTIALS invalid/missing`**: This is critical. Verify the environment variable is correctly set to the *full, absolute path* of your service account JSON key file *in the same terminal session* you are running the app from. The `geolocation_engine.py` uses `ImageAnnotatorClient.from_service_account_file()` which depends on this variable being correctly passed or `os.getenv()` retrieving it successfully.
+*   **`ImportError` for `geolocation_engine`**:
+    *   Both `app.py` and `image_geolocate.py` will print specific error messages if they cannot import `process_image_geolocation` from `geolocation_engine.py`.
+    *   Ensure all files (`app.py`, `image_geolocate.py`, `geolocation_engine.py`) are in the correct root directory.
+    *   Check for syntax errors in `geolocation_engine.py` by trying to run it directly (e.g., `python geolocation_engine.py` - it won't do much but will show syntax errors).
+*   **`GOOGLE_APPLICATION_CREDENTIALS` invalid/missing**:
+    *   This is critical for the Cloud Vision API. The `geolocation_engine.py` includes "AGGRESSIVE DEBUGGING FOR CREDENTIALS" logging, which will output (at DEBUG level) the path it's trying to use.
+    *   Verify the environment variable is correctly set to the *full, absolute path* of your service account JSON key file *in the same terminal session* you are running the app from.
+    *   The engine explicitly uses `vision.ImageAnnotatorClient.from_service_account_file(gcp_cred_path_env)`. If `gcp_cred_path_env` is invalid or the file is unreadable, Vision API calls will fail.
 *   **API Errors (403, Authorization, Quota):**
-    *   Verify all required APIs are **enabled** in Google Cloud Console.
-    *   Check API key validity and restrictions.
+    *   Verify all required APIs (Vision, Geocoding, Maps Static, Places) are **enabled** in Google Cloud Console.
+    *   Check your API key validity and any restrictions (e.g., HTTP referrers, API restrictions).
     *   Ensure **billing is enabled** on your GCP project.
-*   **Image Format Errors**: Install `pillow-heif` and `pillow-avif-plugin` for HEIC/AVIF support.
+*   **Image Format Errors (e.g., for HEIC/AVIF)**:
+    *   Install optional Pillow plugins: `pip install pillow-heif pillow-avif-plugin`. The `geolocation_engine.py` logs a warning if Pillow cannot identify an image format.
+*   **spaCy Model Load Error**:
+    *   If you see "Failed to load 'en_core_web_lg' spaCy model..." in the logs from `geolocation_engine.py`, ensure you have run `python -m spacy download en_core_web_lg`. NLP features will be disabled otherwise.
 
 ---
-This project was developed with the assistance of AI.

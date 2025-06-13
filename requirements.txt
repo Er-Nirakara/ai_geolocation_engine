@@ -43,9 +43,8 @@ pyasn1_modules==0.4.2
 pydantic==2.11.4
 pydantic_core==2.33.2
 Pygments==2.19.1
-python==3.12
 python-dotenv==1.1.0
-requests==2.32.3
+requests==2.32.4
 rich==14.0.0
 rsa==4.9.1
 setuptools==80.3.0
