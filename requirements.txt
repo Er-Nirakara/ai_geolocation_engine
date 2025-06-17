@@ -37,7 +37,7 @@ pillow-avif-plugin==1.5.2
 pillow_heif==0.22.0
 preshed==3.0.9
 proto-plus==1.26.1
-protobuf==5.29.4
+protobuf==5.29.5
 pyasn1==0.6.1
 pyasn1_modules==0.4.2
 pydantic==2.11.4
